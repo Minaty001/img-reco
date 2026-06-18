@@ -384,6 +384,12 @@ def run_detection(image_bytes: bytes) -> dict:
 # API Endpoints
 # ------------------------------------------------------------------
 
+@app.on_event("startup")
+async def startup():
+    """Suppress noisy httptools invalid-request warnings."""
+    logging.getLogger("httptools").setLevel(logging.ERROR)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     """Serve the main UI (read HTML directly — avoids Jinja2/Python 3.14 compat issues)."""
@@ -392,6 +398,18 @@ async def index():
         return HTMLResponse("<h1>index.html not found</h1>", status_code=404)
     html_content = html_path.read_text(encoding="utf-8")
     return HTMLResponse(content=html_content)
+
+
+@app.get("/favicon.ico", response_class=HTMLResponse)
+async def favicon():
+    """Return an inline SVG favicon to prevent 404 errors."""
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+        '<rect width="64" height="64" rx="12" fill="#39d2c0"/>'
+        '<text x="32" y="44" font-size="36" text-anchor="middle" fill="#000" font-weight="bold">V</text>'
+        "</svg>"
+    )
+    return HTMLResponse(content=svg, media_type="image/svg+xml")
 
 
 @app.post("/detect")
@@ -424,6 +442,13 @@ async def reset_history():
     global detection_history
     detection_history = DetectionHistory()
     return {"status": "reset"}
+
+
+# Catch unmatched routes to avoid noisy error logs from browser probes
+@app.api_route("/{path_name:path}", methods=["GET", "POST", "OPTIONS", "HEAD"], include_in_schema=False)
+async def catch_all(path_name: str):
+    """Return 204 for arbitrary browser probes (e.g., favicon fallbacks, preconnects)."""
+    return JSONResponse(status_code=204, content=None)
 
 
 # ------------------------------------------------------------------
