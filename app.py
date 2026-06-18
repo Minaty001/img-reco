@@ -25,14 +25,16 @@ import logging
 from pathlib import Path
 from io import BytesIO
 from collections import Counter
-from typing import List, Optional
+from typing import List
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 import numpy as np
+import torch
 import uvicorn
+from contextlib import asynccontextmanager
 
 # ------------------------------------------------------------------
 # Logging setup
@@ -79,12 +81,23 @@ def get_model():
 
 
 # ------------------------------------------------------------------
+# Lifespan context manager (must be defined before FastAPI construction)
+# ------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Suppress noisy httptools invalid-request warnings on startup."""
+    logging.getLogger("httptools").setLevel(logging.ERROR)
+    yield
+
+
+# ------------------------------------------------------------------
 # FastAPI Application
 # ------------------------------------------------------------------
 app = FastAPI(
     title="Vision Assistant",
     description="Real-time AI Vision Assistant with Voice Feedback",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Mount static files
@@ -166,9 +179,9 @@ HINDI_NAMES = {
     "cake": "cake",
     "chair": "kursi",
     "couch": "sofa",
-    "potted plant": "gaml a poda",
+    "potted plant": "gamle ka podha",
     "bed": "bistar",
-    "dining table": "khan ki mez",
+    "dining table": "khaane ki mez",
     "toilet": "shauchalay",
     "tv": "tv",
     "laptop": "laptop",
@@ -180,7 +193,7 @@ HINDI_NAMES = {
     "clock": "ghadi",
     "vase": "phooldan",
     "teddy bear": "teddy bear",
-    "toothbrush": "manjan",
+    "toothbrush": "daant ka brush",
     "microwave": "microwave",
     "oven": "oven",
     "refrigerator": "fridge",
@@ -253,70 +266,6 @@ def generate_description(objects: List[dict], language: str = "en") -> str:
 
 
 # ------------------------------------------------------------------
-# Detection History
-#   Stores latest detection state for smart-speaking logic
-# ------------------------------------------------------------------
-class DetectionHistory:
-    def __init__(self):
-        self.current_objects = []       # List[dict] latest detections
-        self.previous_objects = []      # List[dict] previous frame detections
-        self.last_spoken = ""           # Last message that was spoken
-        self.current_names = set()      # Set of object names in current frame
-        self.previous_names = set()     # Set of object names in previous frame
-        self.frame_count = 0
-
-    def update(self, objects: List[dict], description_en: str):
-        """Update detection history and determine if we should speak."""
-        self.previous_objects = self.current_objects
-        self.current_objects = objects
-        self.previous_names = self.current_names
-        self.current_names = set(obj["name"] for obj in objects)
-        self.frame_count += 1
-
-        # Smart speaking logic:
-        should_speak = False
-        message = ""
-
-        if self.frame_count == 1:
-            # First detection - always speak
-            should_speak = True
-            message = description_en
-        else:
-            # New object appeared
-            new_objects = self.current_names - self.previous_names
-            # Object disappeared
-            removed_objects = self.previous_names - self.current_names
-
-            if new_objects:
-                should_speak = True
-            elif removed_objects:
-                should_speak = True
-            else:
-                # Check if counts changed for any object
-                current_counter = Counter(obj["name"] for obj in self.current_objects)
-                previous_counter = Counter(obj["name"] for obj in self.previous_objects)
-                if current_counter != previous_counter:
-                    should_speak = True
-
-        if should_speak:
-            self.last_spoken = description_en
-
-        return should_speak, message if should_speak else None
-
-    def get_state(self) -> dict:
-        """Return current detection state as dict."""
-        return {
-            "current_objects": self.current_objects,
-            "previous_objects": self.previous_objects,
-            "last_spoken": self.last_spoken,
-        }
-
-
-# Global detection history instance
-detection_history = DetectionHistory()
-
-
-# ------------------------------------------------------------------
 # Core Detection Function
 # ------------------------------------------------------------------
 def run_detection(image_bytes: bytes) -> dict:
@@ -338,8 +287,8 @@ def run_detection(image_bytes: bytes) -> dict:
         if img.mode == "RGBA":
             img = img.convert("RGB")
 
-        # Run inference (no training mode, half precision for speed)
-        results = model(img, verbose=False, half=True)[0]
+        # Run inference (no training mode, half precision for speed on GPU)
+        results = model(img, verbose=False, half=torch.cuda.is_available())[0]
 
         # Parse detections
         objects = []
@@ -358,15 +307,10 @@ def run_detection(image_bytes: bytes) -> dict:
         description_en = generate_description(objects, "en")
         description_hi = generate_description(objects, "hi")
 
-        # Update detection history
-        should_speak, _ = detection_history.update(objects, description_en)
-
         return {
             "objects": objects,
             "description_en": description_en,
             "description_hi": description_hi,
-            "should_speak": should_speak,
-            "history": detection_history.get_state(),
         }
 
     except Exception as e:
@@ -375,20 +319,12 @@ def run_detection(image_bytes: bytes) -> dict:
             "objects": [],
             "description_en": "Detection error occurred.",
             "description_hi": "Detect mein error aaya hai.",
-            "should_speak": False,
-            "history": detection_history.get_state(),
         }
 
 
 # ------------------------------------------------------------------
 # API Endpoints
 # ------------------------------------------------------------------
-
-@app.on_event("startup")
-async def startup():
-    """Suppress noisy httptools invalid-request warnings."""
-    logging.getLogger("httptools").setLevel(logging.ERROR)
-
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -409,7 +345,7 @@ async def favicon():
         '<text x="32" y="44" font-size="36" text-anchor="middle" fill="#000" font-weight="bold">V</text>'
         "</svg>"
     )
-    return HTMLResponse(content=svg, media_type="image/svg+xml")
+    return Response(content=svg, media_type="image/svg+xml")
 
 
 @app.post("/detect")
@@ -430,25 +366,11 @@ async def health():
     return {"status": "ok", "model_loaded": _model is not None}
 
 
-@app.get("/history")
-async def history():
-    """Return current detection history state."""
-    return JSONResponse(content=detection_history.get_state())
-
-
-@app.post("/reset_history")
-async def reset_history():
-    """Reset detection history."""
-    global detection_history
-    detection_history = DetectionHistory()
-    return {"status": "reset"}
-
-
 # Catch unmatched routes to avoid noisy error logs from browser probes
 @app.api_route("/{path_name:path}", methods=["GET", "POST", "OPTIONS", "HEAD"], include_in_schema=False)
 async def catch_all(path_name: str):
     """Return 204 for arbitrary browser probes (e.g., favicon fallbacks, preconnects)."""
-    return JSONResponse(status_code=204, content=None)
+    return Response(status_code=204)
 
 
 # ------------------------------------------------------------------

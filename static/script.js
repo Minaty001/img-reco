@@ -444,6 +444,12 @@
         isCameraOn = false;
         isProcessing = false;
 
+        // Reset smart-speaking state so next camera session starts fresh
+        captureCount = 0;
+        lastObjectNames = new Set();
+        lastObjectCounts = {};
+        lastSpokenMessage = "";
+
         openCameraBtn.classList.remove("hidden");
         openCameraBtn.disabled = false;
         closeCameraBtn.classList.add("hidden");
