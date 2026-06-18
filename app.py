@@ -54,6 +54,10 @@ CONFIDENCE_THRESHOLD = 0.40  # Minimum confidence for detections
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Render.com assigns a dynamic port via $PORT env variable
+PORT = int(os.environ.get("PORT", 2009))
+HOST = os.environ.get("HOST", "0.0.0.0")
+
 # ------------------------------------------------------------------
 # YOLO Model Loader (lazy load on first request)
 # ------------------------------------------------------------------
@@ -424,12 +428,12 @@ async def reset_history():
 if __name__ == "__main__":
     print("=" * 50)
     print("  Vision Assistant - AI Vision WebApp")
-    print("  Running on: http://0.0.0.0:2009")
+    print(f"  Running on: http://{HOST}:{PORT}")
     print("=" * 50)
     uvicorn.run(
         "app:app",
-        host="0.0.0.0",
-        port=2009,
+        host=HOST,
+        port=PORT,
         reload=False,
         log_level="info",
     )

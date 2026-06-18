@@ -1,0 +1,24 @@
+# =============================================
+# render.yaml - Render Blueprint Deployment
+# =============================================
+# Deploy with one click:
+#   1. Push this repo to GitHub
+#   2. On Render.com Dashboard → New → Blueprint
+#   3. Connect your repo
+# =============================================
+
+services:
+  - type: web
+    name: vision-assistant
+    runtime: python
+    region: singapore  # Closer to India for lower latency
+    plan: free         # Free tier (512 MB RAM, suitable for YOLOv8n)
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.13
+      - key: HOST
+        value: 0.0.0.0
+    healthCheckPath: /health
+    autoDeploy: true

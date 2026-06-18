@@ -1,21 +1,24 @@
 # ========================================
 # Vision Assistant - Python Dependencies
 # ========================================
-# Python 3.13.13 compatible
-# Designed for Android Termux
+# Python 3.13 compatible
+# Designed for Render.com & Android Termux
 
 # Web Framework
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
 
 # Image Processing
-Pillow==11.1.0
-python-multipart==0.0.20
+Pillow>=10.0.0
+python-multipart>=0.0.9
 
 # YOLOv8 Object Detection
-# For Termux: if installation fails, see INSTALL.md for fallback
-ultralytics==8.3.75
+# Ultralytics auto-downloads the model on first use
+ultralytics>=8.3.0
 
 # Utilities
-numpy==2.2.3
-torch>=2.0.0
+numpy>=1.24.0
+
+# PyTorch (CPU-only is sufficient for inference)
+# Render.com build includes torch automatically via ultralytics dependency
+# No need to pin a specific torch version
