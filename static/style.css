@@ -486,6 +486,54 @@ body {
     z-index: 100;
 }
 
+/* ----- Permission Banner ----- */
+.perm-banner {
+    margin-bottom: 12px;
+    animation: fadeIn 0.3s ease;
+}
+
+.perm-banner-content {
+    position: relative;
+    background: rgba(248, 81, 73, 0.12);
+    border: 1px solid var(--accent-red);
+    border-radius: var(--radius-sm);
+    padding: 14px 40px 14px 16px;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.perm-banner-content strong {
+    color: var(--accent-red);
+}
+
+.perm-banner-detail {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 10px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.perm-banner-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.perm-banner-close:hover {
+    color: var(--text-primary);
+}
+
 /* ----- Animations ----- */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(4px); }

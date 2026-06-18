@@ -292,7 +292,99 @@
     // ---------------------------------------------------------------
     // Camera Management
     // ---------------------------------------------------------------
+    function getPermissionGuide(err) {
+        const name = err.name || "";
+        const msg = err.message || "";
+        const isHttp =
+            window.location.protocol === "http:" &&
+            window.location.hostname !== "localhost" &&
+            window.location.hostname !== "127.0.0.1";
+
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+            if (isHttp) {
+                return {
+                    text: "Camera blocked over HTTP. Use HTTPS or localhost.",
+                    detail:
+                        'On Android Chrome: open chrome://flags/#unsafely-treat-insecure-origin-as-secure, add this site, restart Chrome.',
+                };
+            }
+            return {
+                text: "Camera permission denied.",
+                detail:
+                    'Tap the 🔒/ℹ️ icon in Chrome address bar → Site Settings → Camera → Allow, then reload.',
+            };
+        }
+        if (name === "NotFoundError") {
+            return {
+                text: "No camera found on this device.",
+                detail: "Connect an external camera or use a device with a built-in camera.",
+            };
+        }
+        if (name === "NotReadableError") {
+            return {
+                text: "Camera is busy (used by another app).",
+                detail: "Close other apps that use the camera and try again.",
+            };
+        }
+        if (name === "OverconstrainedError") {
+            return {
+                text: "Camera doesn't support the requested resolution.",
+                detail: "",
+            };
+        }
+        return {
+            text: "Camera access failed.",
+            detail: msg || "Unknown error. Check camera permissions.",
+        };
+    }
+
+    function showPermissionGuide(err) {
+        const guide = getPermissionGuide(err);
+        setStatus("error", guide.text);
+
+        // Show a detailed banner below the controls
+        let banner = document.getElementById("permBanner");
+        if (!banner) {
+            banner = document.createElement("div");
+            banner.id = "permBanner";
+            banner.className = "perm-banner";
+            const controls = document.querySelector(".controls");
+            controls.parentNode.insertBefore(banner, controls.nextSibling);
+        }
+        banner.innerHTML =
+            '<div class="perm-banner-content">' +
+            "<strong>⚠️ " +
+            escapeHtml(guide.text) +
+            "</strong>" +
+            (guide.detail
+                ? '<p class="perm-banner-detail">' + escapeHtml(guide.detail) + "</p>"
+                : "") +
+            '<button class="perm-banner-close" onclick="this.parentElement.remove()">✕</button>' +
+            "</div>";
+        banner.classList.remove("hidden");
+    }
+
+    function hidePermissionBanner() {
+        const banner = document.getElementById("permBanner");
+        if (banner) {
+            banner.classList.add("hidden");
+            banner.innerHTML = "";
+        }
+    }
+
     async function openCamera() {
+        hidePermissionBanner();
+
+        // Detect HTTP-on-mobile early and show a warning first
+        const isInsecureHttp =
+            window.location.protocol === "http:" &&
+            window.location.hostname !== "localhost" &&
+            window.location.hostname !== "127.0.0.1";
+        if (isInsecureHttp) {
+            // Show a warning but still try (Chrome might block it anyway)
+            console.warn("Camera over HTTP on non-localhost — Chrome may block it.");
+        }
+
         try {
             const constraints = {
                 video: {
@@ -304,40 +396,38 @@
             };
 
             stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-            videoOverlay.classList.add("hidden");
-
-            isCameraOn = true;
-            openCameraBtn.classList.add("hidden");
-            closeCameraBtn.classList.remove("hidden");
-            captureBtn.disabled = false;
-            captureBtn.classList.remove("hidden");
-            retakeBtn.classList.add("hidden");
-
-            setStatus("active", "Camera ready — tap Capture & Detect");
+            onCameraReady();
             return true;
         } catch (err) {
-            console.error("Camera error:", err);
-            // Fallback
+            console.error("Camera error (primary):", err.name, err.message);
+
+            // Fallback: try without facingMode
             try {
                 const constraints = { video: true, audio: false };
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
-                videoOverlay.classList.add("hidden");
-
-                isCameraOn = true;
-                openCameraBtn.classList.add("hidden");
-                closeCameraBtn.classList.remove("hidden");
-                captureBtn.disabled = false;
-                captureBtn.classList.remove("hidden");
-                setStatus("active", "Camera ready");
+                onCameraReady();
                 return true;
             } catch (err2) {
-                console.error("Fallback camera error:", err2);
-                setStatus("error", "Camera access denied. Allow camera permission.");
+                console.error("Camera error (fallback):", err2.name, err2.message);
+                showPermissionGuide(err2);
+                openCameraBtn.disabled = false;
                 return false;
             }
         }
+    }
+
+    function onCameraReady() {
+        video.srcObject = stream;
+        videoOverlay.classList.add("hidden");
+
+        isCameraOn = true;
+        openCameraBtn.classList.add("hidden");
+        closeCameraBtn.classList.remove("hidden");
+        captureBtn.disabled = false;
+        captureBtn.classList.remove("hidden");
+        retakeBtn.classList.add("hidden");
+
+        setStatus("active", "Camera ready — tap Capture & Detect");
     }
 
     function closeCamera() {
@@ -355,6 +445,7 @@
         isProcessing = false;
 
         openCameraBtn.classList.remove("hidden");
+        openCameraBtn.disabled = false;
         closeCameraBtn.classList.add("hidden");
         captureBtn.disabled = true;
         captureBtn.classList.remove("hidden");
@@ -364,6 +455,7 @@
         window.speechSynthesis.cancel();
         isSpeaking = false;
 
+        hidePermissionBanner();
         setStatus("idle", "Camera closed");
     }
 
@@ -434,19 +526,22 @@
     });
 
     // ---------------------------------------------------------------
-    // Initial Status
+    // Initial Status — auto-open camera on page load
     // ---------------------------------------------------------------
-    setStatus("idle", "Tap Open Camera to start");
+    setStatus("active", "Requesting camera access...");
 
-    // Check browser support
+    // Check browser support first
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setStatus("error", "Camera not supported in this browser.");
         openCameraBtn.disabled = true;
-    }
-
-    if (!window.speechSynthesis) {
+    } else if (!window.speechSynthesis) {
         console.warn("SpeechSynthesis not supported in this browser.");
     }
+
+    // Auto-request camera permission on page load (with a short delay for UI paint)
+    setTimeout(() => {
+        openCamera();
+    }, 300);
 
     console.log("Vision Assistant v2.0 — Capture Mode loaded.");
 })();
