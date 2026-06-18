@@ -14,18 +14,29 @@
         <!-- Header -->
         <header class="header">
             <h1>Vision Assistant</h1>
-            <span class="subtitle">Real-time AI Object Detection</span>
+            <span class="subtitle">Capture &amp; Recognize Objects</span>
         </header>
 
         <!-- ============================================
-             Camera Feed Section
+             Camera / Capture Section
              ============================================ -->
         <div class="camera-section">
-            <div class="video-wrapper">
+            <div class="video-wrapper" id="videoWrapper">
+                <!-- Live camera preview -->
                 <video id="video" autoplay playsinline muted></video>
+                <!-- Hidden canvas for frame capture -->
                 <canvas id="canvas" style="display:none;"></canvas>
+                <!-- Captured photo overlay (shown after capture) -->
+                <img id="capturedImg" class="captured-img hidden" alt="Captured photo">
+                <!-- Loading spinner (shown while detecting) -->
+                <div id="spinner" class="spinner hidden">
+                    <div class="spinner-ring"></div>
+                    <span class="spinner-text">Detecting...</span>
+                </div>
+                <!-- Overlay text when camera is off -->
                 <div class="video-overlay" id="videoOverlay">
-                    <span>Camera feed will appear here</span>
+                    <div class="overlay-icon">📷</div>
+                    <span>Tap "Open Camera" to start</span>
                 </div>
             </div>
         </div>
@@ -34,13 +45,19 @@
              Controls Section
              ============================================ -->
         <div class="controls">
-            <button id="startBtn" class="btn btn-primary">
-                <span class="btn-icon">▶</span> Start Detection
+            <button id="openCameraBtn" class="btn btn-secondary">
+                <span class="btn-icon">📷</span> Open Camera
             </button>
-            <button id="stopBtn" class="btn btn-danger" disabled>
-                <span class="btn-icon">■</span> Stop Detection
+            <button id="captureBtn" class="btn btn-capture" disabled>
+                <span class="btn-icon">📸</span> Capture &amp; Detect
             </button>
-            <button id="toggleLang" class="btn btn-secondary">
+            <button id="retakeBtn" class="btn btn-outline hidden">
+                <span class="btn-icon">🔄</span> Capture Again
+            </button>
+            <button id="closeCameraBtn" class="btn btn-danger hidden">
+                <span class="btn-icon">✕</span> Close Camera
+            </button>
+            <button id="toggleLang" class="btn btn-ghost">
                 <span class="btn-icon">🌐</span> <span id="langLabel">English</span>
             </button>
         </div>
@@ -62,25 +79,21 @@
                 <span class="badge" id="objectCount">0</span>
             </div>
             <div class="panel-body" id="objectsList">
-                <div class="empty-state">No objects detected yet.</div>
+                <div class="empty-state">Capture a photo to detect objects.</div>
             </div>
         </div>
 
         <!-- ============================================
-             Detection History Panel
+             Last Detection Summary
              ============================================ -->
         <div class="panel">
             <div class="panel-header">
-                <h2>Detection History</h2>
+                <h2>Last Detection</h2>
             </div>
             <div class="panel-body history-grid">
                 <div class="history-item">
-                    <label>Current Objects</label>
+                    <label>Objects Found</label>
                     <span id="currentObjects">-</span>
-                </div>
-                <div class="history-item">
-                    <label>Previous Objects</label>
-                    <span id="previousObjects">-</span>
                 </div>
                 <div class="history-item">
                     <label>Last Spoken</label>
@@ -94,15 +107,15 @@
              ============================================ -->
         <div class="speech-box" id="speechBox">
             <div class="speech-label">🗣️ Voice Output</div>
-            <div class="speech-text" id="speechText">Waiting for detections...</div>
+            <div class="speech-text" id="speechText">Capture a photo to hear the description.</div>
         </div>
 
         <!-- ============================================
-             Footer with FPS and Info
+             Footer
              ============================================ -->
         <footer class="footer">
-            <span id="fpsDisplay">FPS: 0</span>
-            <span>Vision Assistant v1.0 &bull; <span id="deployInfo">Deploy on Render</span></span>
+            <span>Vision Assistant v2.0</span>
+            <span>Capture → Detect → Speak</span>
         </footer>
     </div>
 
