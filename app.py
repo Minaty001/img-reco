@@ -27,10 +27,9 @@ from io import BytesIO
 from collections import Counter
 from typing import List, Optional
 
-from fastapi import FastAPI, File, UploadFile, Request
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from PIL import Image
 import numpy as np
 import uvicorn
@@ -91,8 +90,9 @@ app = FastAPI(
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Setup Jinja2 templates
-templates = Jinja2Templates(directory="templates")
+# Path to the main HTML template
+TEMPLATES_DIR = Path("templates")
+TEMPLATES_DIR.mkdir(exist_ok=True)
 
 
 # ------------------------------------------------------------------
@@ -385,9 +385,13 @@ def run_detection(image_bytes: bytes) -> dict:
 # ------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """Serve the main UI."""
-    return templates.TemplateResponse("index.html", {"request": request})
+async def index():
+    """Serve the main UI (read HTML directly — avoids Jinja2/Python 3.14 compat issues)."""
+    html_path = TEMPLATES_DIR / "index.html"
+    if not html_path.exists():
+        return HTMLResponse("<h1>index.html not found</h1>", status_code=404)
+    html_content = html_path.read_text(encoding="utf-8")
+    return HTMLResponse(content=html_content)
 
 
 @app.post("/detect")
