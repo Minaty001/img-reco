@@ -1,0 +1,35 @@
+# Vision Assistant - .gitignore
+
+# Virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Uploaded images
+uploads/*
+!uploads/.gitkeep
+
+# Model file (large, download on first run)
+models/*.pt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.swp
+*.swo
+
+# Logs
+*.log

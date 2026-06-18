@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Vision Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- ============================================
+         Main Container
+         ============================================ -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Vision Assistant</h1>
+            <span class="subtitle">Real-time AI Object Detection</span>
+        </header>
+
+        <!-- ============================================
+             Camera Feed Section
+             ============================================ -->
+        <div class="camera-section">
+            <div class="video-wrapper">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <div class="video-overlay" id="videoOverlay">
+                    <span>Camera feed will appear here</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+             Controls Section
+             ============================================ -->
+        <div class="controls">
+            <button id="startBtn" class="btn btn-primary">
+                <span class="btn-icon">▶</span> Start Detection
+            </button>
+            <button id="stopBtn" class="btn btn-danger" disabled>
+                <span class="btn-icon">■</span> Stop Detection
+            </button>
+            <button id="toggleLang" class="btn btn-secondary">
+                <span class="btn-icon">🌐</span> <span id="langLabel">English</span>
+            </button>
+        </div>
+
+        <!-- ============================================
+             Status Indicator
+             ============================================ -->
+        <div class="status-bar" id="statusBar">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Ready</span>
+        </div>
+
+        <!-- ============================================
+             Detected Objects Panel
+             ============================================ -->
+        <div class="panel" id="objectsPanel">
+            <div class="panel-header">
+                <h2>Detected Objects</h2>
+                <span class="badge" id="objectCount">0</span>
+            </div>
+            <div class="panel-body" id="objectsList">
+                <div class="empty-state">No objects detected yet.</div>
+            </div>
+        </div>
+
+        <!-- ============================================
+             Detection History Panel
+             ============================================ -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Detection History</h2>
+            </div>
+            <div class="panel-body history-grid">
+                <div class="history-item">
+                    <label>Current Objects</label>
+                    <span id="currentObjects">-</span>
+                </div>
+                <div class="history-item">
+                    <label>Previous Objects</label>
+                    <span id="previousObjects">-</span>
+                </div>
+                <div class="history-item">
+                    <label>Last Spoken</label>
+                    <span id="lastSpoken">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+             Spoken Message Display
+             ============================================ -->
+        <div class="speech-box" id="speechBox">
+            <div class="speech-label">🗣️ Voice Output</div>
+            <div class="speech-text" id="speechText">Waiting for detections...</div>
+        </div>
+
+        <!-- ============================================
+             Footer with FPS and Info
+             ============================================ -->
+        <footer class="footer">
+            <span id="fpsDisplay">FPS: 0</span>
+            <span>Vision Assistant v1.0</span>
+        </footer>
+    </div>
+
+    <!-- ============================================
+         Scripts
+         ============================================ -->
+    <script src="/static/script.js"></script>
+</body>
+</html>

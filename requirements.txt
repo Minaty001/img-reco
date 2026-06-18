@@ -1,0 +1,21 @@
+# ========================================
+# Vision Assistant - Python Dependencies
+# ========================================
+# Python 3.13.13 compatible
+# Designed for Android Termux
+
+# Web Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Image Processing
+Pillow==11.1.0
+python-multipart==0.0.20
+
+# YOLOv8 Object Detection
+# For Termux: if installation fails, see INSTALL.md for fallback
+ultralytics==8.3.75
+
+# Utilities
+numpy==2.2.3
+torch>=2.0.0
